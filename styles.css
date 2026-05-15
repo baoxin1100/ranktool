@@ -1,0 +1,222 @@
+:root {
+    --bg-color: #1a1a1a;
+    --text-color: #ffffff;
+    --container-bg: #2a2a2a;
+    --border-color: #444;
+    --accent-color: #ff4757;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+h1 {
+    margin: 0 0 10px 0;
+    color: var(--accent-color);
+}
+
+.controls {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+.upload-btn, button {
+    padding: 10px 20px;
+    background-color: #444;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.upload-btn:hover, button:hover {
+    background-color: #666;
+}
+
+#save-btn {
+    background-color: #2ecc71;
+}
+
+#save-btn:hover {
+    background-color: #27ae60;
+}
+
+main {
+    width: 100%;
+    max-width: 1000px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Tier Container Styles */
+.tier-row {
+    display: flex;
+    min-height: 100px;
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 8px;
+    position: relative;
+    cursor: default;
+    transition: box-shadow 0.2s, transform 0.1s;
+}
+
+.tier-row.dragging-tier {
+    opacity: 0.8;
+    transform: scale(0.98);
+    box-shadow: 0 0 20px rgba(0,0,0,0.5);
+    z-index: 100;
+}
+
+.tier-label {
+    width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 20px;
+    color: #000;
+    text-align: center;
+    border-right: 1px solid var(--border-color);
+    user-select: none;
+    outline: none;
+    padding: 10px;
+    transition: background-color 0.3s, filter 0.2s;
+    cursor: text;
+}
+
+.tier-label:hover {
+    filter: brightness(1.1);
+}
+
+.tier-drop-zone {
+    flex: 1;
+    display: flex;
+    flex-wrap: wrap;
+    padding: 10px;
+    gap: 10px;
+    align-content: flex-start;
+    position: relative;
+}
+
+/* Context Menu Styles */
+.context-menu {
+    position: fixed;
+    z-index: 1000;
+    background-color: var(--container-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 5px 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    min-width: 100px;
+}
+
+.context-menu-item {
+    padding: 8px 15px;
+    cursor: pointer;
+    color: var(--text-color);
+    font-size: 14px;
+    transition: background 0.2s;
+}
+
+.context-menu-item:hover {
+    background-color: var(--accent-color);
+}
+
+/* Pool Styles */
+#pool-container {
+    background-color: var(--container-bg);
+    border: 2px dashed var(--border-color);
+    border-radius: 8px;
+    padding: 20px;
+    margin-top: 20px;
+}
+
+.pool-header {
+    text-align: center;
+    margin-bottom: 15px;
+    font-size: 18px;
+    color: #aaa;
+}
+
+#character-pool {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    justify-content: center;
+    min-height: 120px;
+}
+
+/* Character Item Styles */
+.character-item {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    cursor: grab;
+    transition: transform 0.1s;
+}
+
+/* 尺寸定义 */
+.character-item.size-small { width: 50px; height: 50px; }
+.character-item.size-default { width: 80px; height: 80px; }
+.character-item.size-medium { width: 110px; height: 110px; }
+.character-item.size-large { width: 140px; height: 140px; }
+
+.size-select {
+    padding: 10px 12px;
+    border-radius: 5px;
+    background-color: #444;
+    color: white;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    transition: background 0.3s;
+}
+
+.size-select:hover {
+    background-color: #666;
+}
+
+.character-item:active {
+    cursor: grabbing;
+}
+
+.character-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 4px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    border: 2px solid transparent;
+    transition: border-color 0.2s, opacity 0.2s;
+    user-select: none;
+    pointer-events: none; /* 确保拖拽由容器处理 */
+}
+
+
+.dragging {
+    opacity: 0.4;
+    border: 2px solid white;
+}
+
+.drop-zone.drag-over {
+    background-color: rgba(255, 255, 255, 0.1);
+}
