@@ -227,6 +227,12 @@ document.addEventListener('DOMContentLoaded', function() {
         zone.addEventListener('drop', (e) => {
             e.preventDefault();
             zone.classList.remove('drag-over');
+            
+            // 检查是否有文件被拖入，如果有则上传
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFiles(files);
+            }
         });
     }
 
