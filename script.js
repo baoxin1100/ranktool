@@ -109,8 +109,7 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTiersColors();
     });
 
-    fileUpload.addEventListener('change', function(e) {
-        const files = e.target.files;
+    function handleFiles(files) {
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (!file.type.startsWith('image/')) continue;
@@ -118,7 +117,37 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.onload = (event) => createCharacterItem(event.target.result);
             reader.readAsDataURL(file);
         }
+    }
+
+    fileUpload.addEventListener('change', function(e) {
+        handleFiles(e.target.files);
         this.value = '';
+    });
+
+    // 拖拽文件上传
+    document.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    document.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFiles(files);
+        }
+    });
+
+    // 粘贴图片上传
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => createCharacterItem(event.target.result);
+                reader.readAsDataURL(blob);
+            }
+        }
     });
 
     function createCharacterItem(src) {
