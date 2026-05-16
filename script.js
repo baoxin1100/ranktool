@@ -11,11 +11,10 @@ createApp({
             { id: 't5', name: '拉完了', color: '#7f7fff' },
         ]);
         const pool = ref([]);
-        const allCharacters = ref([]); // Global list of characters with their current location
+        const allCharacters = ref([]); // Global ordered list of characters
         const contextMenu = ref({ visible: false, x: 0, y: 0, targetId: null });
         const tierContainer = ref(null);
 
-        // Helper to get characters in a specific tier
         const getCharactersInTier = (tierId) => {
             return allCharacters.value.filter(char => char.tierId === tierId);
         };
@@ -33,9 +32,11 @@ createApp({
         const handleFileUpload = (e) => {
             const files = e.target.files;
             processFiles(files);
+            e.target.value = ''; // Reset input
         };
 
         const processFiles = (files) => {
+            const newChars = [];
             for (let file of files) {
                 if (!file.type.startsWith('image/')) continue;
                 const reader = new FileReader();
@@ -46,22 +47,27 @@ createApp({
                         tierId: 'pool'
                     };
                     allCharacters.value.push(char);
-                    pool.value.push(char);
+                    syncPool();
                 };
                 reader.readAsDataURL(file);
             }
         };
 
+        const syncPool = () => {
+            pool.value = allCharacters.value.filter(c => c.tierId === 'pool');
+        };
+
         const resetAll = () => {
             allCharacters.value.forEach(char => char.tierId = 'pool');
-            pool.value = [...allCharacters.value];
+            syncPool();
         };
 
         const saveScreenshot = () => {
             html2canvas(tierContainer.value, {
                 backgroundColor: '#1a1a1a',
                 useCORS: true,
-                scale: 2
+                scale: 2,
+                logging: false
             }).then(canvas => {
                 const link = document.createElement('a');
                 link.download = '从夯到拉排名.png';
@@ -85,15 +91,17 @@ createApp({
         const confirmDelete = () => {
             const id = contextMenu.value.targetId;
             allCharacters.value = allCharacters.value.filter(c => c.id !== id);
-            pool.value = pool.value.filter(c => c.id !== id);
+            syncPool();
             contextMenu.value.visible = false;
         };
 
         const initSortables = () => {
-            // 1. Sortable for Tiers (Rows)
+            // 1. Tiers Sorting
             Sortable.create(tierContainer.value, {
-                animation: 150,
+                animation: 200,
                 draggable: '.tier-row',
+                handle: '.tier-label', // Only drag by label to avoid conflict with char drag
+                ghostClass: 'sortable-ghost',
                 onEnd: (evt) => {
                     const items = Array.from(tierContainer.value.querySelectorAll('.tier-row'));
                     const newTiers = items.map(el => {
@@ -104,14 +112,17 @@ createApp({
                 }
             });
 
-            // 2. Sortable for Characters in each Tier and Pool
+            // 2. Characters Sorting
             const zones = document.querySelectorAll('.drop-zone');
             zones.forEach(zone => {
                 Sortable.create(zone, {
                     group: 'characters',
-                    animation: 150,
-                    fallbackOnTouch: true, // Important for mobile
-                    swapThreshold: 0,
+                    animation: 200,
+                    fallbackOnTouch: true,
+                    swapThreshold: 0.2,
+                    ghostClass: 'sortable-ghost',
+                    dragClass: 'sortable-drag',
+                    forceFallback: true, // Increases smoothness and reliability on mobile
                     onEnd: (evt) => {
                         const charId = evt.item.getAttribute('data-char-id');
                         const newTierId = evt.to.getAttribute('data-tier-id');
@@ -119,9 +130,24 @@ createApp({
                         const char = allCharacters.value.find(c => c.id === charId);
                         if (char) {
                             char.tierId = newTierId;
-                            // Sync pool array
-                            pool.value = allCharacters.value.filter(c => c.tierId === 'pool');
                         }
+
+                        // CRITICAL: Sync the global allCharacters array order to match DOM order
+                        // This allows inserting between images and prevents "snapping back"
+                        const allZones = document.querySelectorAll('.drop-zone');
+                        const newOrderedList = [];
+                        
+                        allZones.forEach(z => {
+                            const items = z.querySelectorAll('.character-item');
+                            items.forEach(item => {
+                                const id = item.getAttribute('data-char-id');
+                                const found = allCharacters.value.find(c => c.id === id);
+                                if (found) newOrderedList.push(found);
+                            });
+                        });
+
+                        allCharacters.value = newOrderedList;
+                        syncPool();
                     }
                 });
             });
@@ -130,7 +156,6 @@ createApp({
         onMounted(() => {
             initSortables();
 
-            // Handle window-level paste
             document.addEventListener('paste', (e) => {
                 const items = e.clipboardData.items;
                 for (let i = 0; i < items.length; i++) {
@@ -144,14 +169,13 @@ createApp({
                                 tierId: 'pool'
                             };
                             allCharacters.value.push(char);
-                            pool.value.push(char);
+                            syncPool();
                         };
                         reader.readAsDataURL(blob);
                     }
                 }
             });
 
-            // Handle window-level drag and drop
             window.addEventListener('dragover', (e) => e.preventDefault());
             window.addEventListener('drop', (e) => {
                 e.preventDefault();
@@ -159,7 +183,6 @@ createApp({
                 if (files.length > 0) processFiles(files);
             });
 
-            // Close context menu on click
             document.addEventListener('click', () => {
                 contextMenu.value.visible = false;
             });
