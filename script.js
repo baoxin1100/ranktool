@@ -109,7 +109,8 @@ document.addEventListener('DOMContentLoaded', function() {
         updateTiersColors();
     });
 
-    function handleFiles(files) {
+    fileUpload.addEventListener('change', function(e) {
+        const files = e.target.files;
         for (let i = 0; i < files.length; i++) {
             const file = files[i];
             if (!file.type.startsWith('image/')) continue;
@@ -117,37 +118,7 @@ document.addEventListener('DOMContentLoaded', function() {
             reader.onload = (event) => createCharacterItem(event.target.result);
             reader.readAsDataURL(file);
         }
-    }
-
-    fileUpload.addEventListener('change', function(e) {
-        handleFiles(e.target.files);
         this.value = '';
-    });
-
-    // 拖拽文件上传
-    document.addEventListener('dragover', (e) => {
-        e.preventDefault();
-    });
-
-    document.addEventListener('drop', (e) => {
-        e.preventDefault();
-        const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            handleFiles(files);
-        }
-    });
-
-    // 粘贴图片上传
-    document.addEventListener('paste', (e) => {
-        const items = e.clipboardData.items;
-        for (let i = 0; i < items.length; i++) {
-            if (items[i].type.indexOf('image') !== -1) {
-                const blob = items[i].getAsFile();
-                const reader = new FileReader();
-                reader.onload = (event) => createCharacterItem(event.target.result);
-                reader.readAsDataURL(blob);
-            }
-        }
     });
 
     function createCharacterItem(src) {
@@ -227,12 +198,6 @@ document.addEventListener('DOMContentLoaded', function() {
         zone.addEventListener('drop', (e) => {
             e.preventDefault();
             zone.classList.remove('drag-over');
-            
-            // 检查是否有文件被拖入，如果有则上传
-            const files = e.dataTransfer.files;
-            if (files.length > 0) {
-                handleFiles(files);
-            }
         });
     }
 
@@ -254,6 +219,42 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     setupDropZone(characterPool);
+
+    // 处理拖拽文件上传
+    window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFiles(files);
+        }
+    });
+
+    // 处理粘贴图片上传
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => createCharacterItem(event.target.result);
+                reader.readAsDataURL(blob);
+            }
+        }
+    });
+
+    function handleFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (!file.type.startsWith('image/')) continue;
+            const reader = new FileReader();
+            reader.onload = (event) => createCharacterItem(event.target.result);
+            reader.readAsDataURL(file);
+        }
+    }
 
     resetBtn.addEventListener('click', () => {
         document.querySelectorAll('.character-item').forEach(item => characterPool.appendChild(item));
