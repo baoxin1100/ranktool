@@ -18,14 +18,16 @@ document.addEventListener('DOMContentLoaded', function() {
     const poolSortable = new Sortable(characterPool, {
         group: 'characters',
         animation: 150,
-        ghostClass: 'sortable-ghost'
+        ghostClass: 'sortable-ghost',
+        forceFallback: true
     });
 
     // 初始化排名栏位的 Sortable (允许行之间排序)
     const rowsSortable = new Sortable(tierContainer, {
         animation: 150,
         handle: '.tier-label', // 只有点击标签才能拖动整行
-        ghostClass: 'sortable-tier-ghost'
+        ghostClass: 'sortable-tier-ghost',
+        forceFallback: true
     });
 
     sizeSelector.addEventListener('change', function() {
@@ -76,6 +78,7 @@ document.addEventListener('DOMContentLoaded', function() {
             group: 'characters',
             animation: 150,
             ghostClass: 'sortable-ghost',
+            forceFallback: true,
             onAdd: function(evt) {
                 // 可以在这里添加元素进入时的逻辑
             }
@@ -122,6 +125,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const img = document.createElement('img');
         img.src = src;
         img.className = 'character-img';
+        img.draggable = false;
         
         container.appendChild(img);
 

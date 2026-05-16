@@ -172,6 +172,9 @@ main {
     height: 80px;
     cursor: grab;
     transition: transform 0.1s;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-drag: none;
 }
 
 /* 尺寸定义 */
