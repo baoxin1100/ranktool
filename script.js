@@ -1,197 +1,209 @@
-const { createApp, ref, onMounted, nextTick } = Vue;
+document.addEventListener('DOMContentLoaded', function() {
+    const defaultTiers = [
+        { name: '夯', color: '#ff7f7f' },
+        { name: '顶级', color: '#ffbf7f' },
+        { name: '人上人', color: '#ffff7f' },
+        { name: 'NPC', color: '#7fff7f' },
+        { name: '拉完了', color: '#7f7fff' },
+    ];
 
-createApp({
-    setup() {
-        const selectedSize = ref('default');
-        const tiers = ref([
-            { id: 't1', name: '夯', color: '#ff7f7f' },
-            { id: 't2', name: '顶级', color: '#ffbf7f' },
-            { id: 't3', name: '人上人', color: '#ffff7f' },
-            { id: 't4', name: 'NPC', color: '#7fff7f' },
-            { id: 't5', name: '拉完了', color: '#7f7fff' },
-        ]);
-        const pool = ref([]);
-        const allCharacters = ref([]); // Global ordered list of characters
-        const contextMenu = ref({ visible: false, x: 0, y: 0, targetId: null });
-        const tierContainer = ref(null);
+    const tierContainer = document.getElementById('tier-container');
+    const characterPool = document.getElementById('character-pool');
+    const fileUpload = document.getElementById('file-upload');
+    const addTierBtn = document.getElementById('add-tier-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const sizeSelector = document.getElementById('size-selector');
 
-        const getCharactersInTier = (tierId) => {
-            return allCharacters.value.filter(char => char.tierId === tierId);
-        };
+    // 初始化卡片池的 Sortable
+    const poolSortable = new Sortable(characterPool, {
+        group: 'characters',
+        animation: 150,
+        ghostClass: 'sortable-ghost'
+    });
 
-        const addTier = () => {
-            const id = 't' + Date.now();
-            tiers.value.push({ id, name: '新标签', color: null });
-            nextTick(() => initSortables());
-        };
+    // 初始化排名栏位的 Sortable (允许行之间排序)
+    const rowsSortable = new Sortable(tierContainer, {
+        animation: 150,
+        handle: '.tier-label', // 只有点击标签才能拖动整行
+        ghostClass: 'sortable-tier-ghost'
+    });
 
-        const updateTierName = (index, event) => {
-            tiers.value[index].name = event.target.innerText;
-        };
+    sizeSelector.addEventListener('change', function() {
+        const selectedSize = this.value;
+        document.querySelectorAll('.character-item').forEach(item => {
+            item.classList.remove('size-small', 'size-default', 'size-medium', 'size-large');
+            item.classList.add(`size-${selectedSize}`);
+        });
+    });
 
-        const handleFileUpload = (e) => {
-            const files = e.target.files;
-            processFiles(files);
-            e.target.value = ''; // Reset input
-        };
+    const contextMenu = document.createElement('div');
+    contextMenu.className = 'context-menu';
+    contextMenu.style.display = 'none';
+    document.body.appendChild(contextMenu);
 
-        const processFiles = (files) => {
-            const newChars = [];
-            for (let file of files) {
-                if (!file.type.startsWith('image/')) continue;
-                const reader = new FileReader();
-                reader.onload = (event) => {
-                    const char = {
-                        id: 'c' + Date.now() + Math.random(),
-                        src: event.target.result,
-                        tierId: 'pool'
-                    };
-                    allCharacters.value.push(char);
-                    syncPool();
-                };
-                reader.readAsDataURL(file);
+    document.addEventListener('click', () => {
+        contextMenu.style.display = 'none';
+    });
+
+    defaultTiers.forEach(tier => createTierRow(tier.name, tier.color));
+    updateTiersColors();
+
+    function updateTiersColors() {
+        const rows = tierContainer.querySelectorAll('.tier-row');
+        const total = rows.length;
+        rows.forEach((row, index) => {
+            const label = row.querySelector('.tier-label');
+            const hue = index * (240 / Math.max(1, total - 1));
+            label.style.backgroundColor = `hsl(${hue}, 80%, 70%)`;
+        });
+    }
+
+    function createTierRow(name, color) {
+        const row = document.createElement('div');
+        row.className = 'tier-row';
+        
+        const label = document.createElement('div');
+        label.className = 'tier-label';
+        label.textContent = name;
+        if (color) label.style.backgroundColor = color;
+        label.contentEditable = true; 
+        
+        const dropZone = document.createElement('div');
+        dropZone.className = 'tier-drop-zone drop-zone';
+        
+        // 为每个排名栏位初始化 Sortable
+        new Sortable(dropZone, {
+            group: 'characters',
+            animation: 150,
+            ghostClass: 'sortable-ghost',
+            onAdd: function(evt) {
+                // 可以在这里添加元素进入时的逻辑
             }
-        };
+        });
+        
+        row.appendChild(label);
+        row.appendChild(dropZone);
 
-        const syncPool = () => {
-            pool.value = allCharacters.value.filter(c => c.tierId === 'pool');
-        };
-
-        const resetAll = () => {
-            allCharacters.value.forEach(char => char.tierId = 'pool');
-            syncPool();
-        };
-
-        const saveScreenshot = () => {
-            html2canvas(tierContainer.value, {
-                backgroundColor: '#1a1a1a',
-                useCORS: true,
-                scale: 2,
-                logging: false
-            }).then(canvas => {
-                const link = document.createElement('a');
-                link.download = '从夯到拉排名.png';
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-            }).catch(err => {
-                console.error('截图失败:', err);
-                alert('截图失败，请尝试刷新页面。');
-            });
-        };
-
-        const showCharContextMenu = (e, charId) => {
-            contextMenu.value = {
-                visible: true,
-                x: e.pageX,
-                y: e.pageY,
-                targetId: charId
-            };
-        };
-
-        const confirmDelete = () => {
-            const id = contextMenu.value.targetId;
-            allCharacters.value = allCharacters.value.filter(c => c.id !== id);
-            syncPool();
-            contextMenu.value.visible = false;
-        };
-
-        const initSortables = () => {
-            // 1. Tiers Sorting
-            Sortable.create(tierContainer.value, {
-                animation: 200,
-                draggable: '.tier-row',
-                handle: '.tier-label', // Only drag by label to avoid conflict with char drag
-                ghostClass: 'sortable-ghost',
-                onEnd: (evt) => {
-                    const items = Array.from(tierContainer.value.querySelectorAll('.tier-row'));
-                    const newTiers = items.map(el => {
-                        const id = el.getAttribute('data-id');
-                        return tiers.value.find(t => t.id === id);
-                    });
-                    tiers.value = newTiers;
-                }
-            });
-
-            // 2. Characters Sorting
-            const zones = document.querySelectorAll('.drop-zone');
-            zones.forEach(zone => {
-                Sortable.create(zone, {
-                    group: 'characters',
-                    animation: 200,
-                    fallbackOnTouch: true,
-                    swapThreshold: 0.2,
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
-                    forceFallback: true, // Increases smoothness and reliability on mobile
-                    onEnd: (evt) => {
-                        const charId = evt.item.getAttribute('data-char-id');
-                        const newTierId = evt.to.getAttribute('data-tier-id');
-                        
-                        const char = allCharacters.value.find(c => c.id === charId);
-                        if (char) {
-                            char.tierId = newTierId;
-                        }
-
-                        // CRITICAL: Sync the global allCharacters array order to match DOM order
-                        // This allows inserting between images and prevents "snapping back"
-                        const allZones = document.querySelectorAll('.drop-zone');
-                        const newOrderedList = [];
-                        
-                        allZones.forEach(z => {
-                            const items = z.querySelectorAll('.character-item');
-                            items.forEach(item => {
-                                const id = item.getAttribute('data-char-id');
-                                const found = allCharacters.value.find(c => c.id === id);
-                                if (found) newOrderedList.push(found);
-                            });
-                        });
-
-                        allCharacters.value = newOrderedList;
-                        syncPool();
-                    }
-                });
-            });
-        };
-
-        onMounted(() => {
-            initSortables();
-
-            document.addEventListener('paste', (e) => {
-                const items = e.clipboardData.items;
-                for (let i = 0; i < items.length; i++) {
-                    if (items[i].type.indexOf('image') !== -1) {
-                        const blob = items[i].getAsFile();
-                        const reader = new FileReader();
-                        reader.onload = (event) => {
-                            const char = {
-                                id: 'c' + Date.now() + Math.random(),
-                                src: event.target.result,
-                                tierId: 'pool'
-                            };
-                            allCharacters.value.push(char);
-                            syncPool();
-                        };
-                        reader.readAsDataURL(blob);
-                    }
-                }
-            });
-
-            window.addEventListener('dragover', (e) => e.preventDefault());
-            window.addEventListener('drop', (e) => {
-                e.preventDefault();
-                const files = e.dataTransfer.files;
-                if (files.length > 0) processFiles(files);
-            });
-
-            document.addEventListener('click', () => {
-                contextMenu.value.visible = false;
+        row.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            showContextMenu(e.pageX, e.pageY, () => {
+                const items = dropZone.querySelectorAll('.character-item');
+                items.forEach(item => characterPool.appendChild(item));
+                row.remove();
+                updateTiersColors();
             });
         });
 
-        return {
-            selectedSize, tiers, pool, contextMenu, tierContainer,
-            getCharactersInTier, addTier, updateTierName, handleFileUpload, 
-            resetAll, saveScreenshot, showCharContextMenu, confirmDelete
-        };
+        tierContainer.appendChild(row);
     }
-}).mount('#app');
+
+    addTierBtn.addEventListener('click', () => {
+        createTierRow('新标签', null);
+        updateTiersColors();
+    });
+
+    fileUpload.addEventListener('change', function(e) {
+        const files = e.target.files;
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (!file.type.startsWith('image/')) continue;
+            const reader = new FileReader();
+            reader.onload = (event) => createCharacterItem(event.target.result);
+            reader.readAsDataURL(file);
+        }
+        this.value = '';
+    });
+
+    function createCharacterItem(src) {
+        const container = document.createElement('div');
+        const selectedSize = document.getElementById('size-selector').value;
+        container.className = `character-item size-${selectedSize}`;
+        
+        const img = document.createElement('img');
+        img.src = src;
+        img.className = 'character-img';
+        
+        container.appendChild(img);
+
+        container.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            showContextMenu(e.pageX, e.pageY, () => {
+                container.remove();
+            });
+        });
+        
+        characterPool.appendChild(container);
+    }
+
+    function showContextMenu(x, y, onDelete) {
+        contextMenu.innerHTML = '';
+        const item = document.createElement('div');
+        item.className = 'context-menu-item';
+        item.textContent = '删除';
+        item.onclick = () => {
+            onDelete();
+            contextMenu.style.display = 'none';
+        };
+        contextMenu.appendChild(item);
+        contextMenu.style.left = x + 'px';
+        contextMenu.style.top = y + 'px';
+        contextMenu.style.display = 'block';
+    }
+
+    window.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    window.addEventListener('drop', (e) => {
+        e.preventDefault();
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleFiles(files);
+        }
+    });
+
+    document.addEventListener('paste', (e) => {
+        const items = e.clipboardData.items;
+        for (let i = 0; i < items.length; i++) {
+            if (items[i].type.indexOf('image') !== -1) {
+                const blob = items[i].getAsFile();
+                const reader = new FileReader();
+                reader.onload = (event) => createCharacterItem(event.target.result);
+                reader.readAsDataURL(blob);
+            }
+        }
+    });
+
+    function handleFiles(files) {
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            if (!file.type.startsWith('image/')) continue;
+            const reader = new FileReader();
+            reader.onload = (event) => createCharacterItem(event.target.result);
+            reader.readAsDataURL(file);
+        }
+    }
+
+    resetBtn.addEventListener('click', () => {
+        document.querySelectorAll('.character-item').forEach(item => characterPool.appendChild(item));
+    });
+
+    document.getElementById('save-btn').addEventListener('click', () => {
+        const tierContainer = document.getElementById('tier-container');
+        
+        html2canvas(tierContainer, {
+            backgroundColor: '#1a1a1a',
+            useCORS: true,
+            scale: 2
+        }).then(canvas => {
+            const link = document.createElement('a');
+            link.download = '从夯到拉排名.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }).catch(err => {
+            console.error('截图失败:', err);
+            alert('截图失败，请检查浏览器权限或尝试刷新页面。');
+        });
+    });
+});
